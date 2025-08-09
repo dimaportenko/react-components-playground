@@ -1,7 +1,11 @@
 import { DemoCard } from "./DemoCard";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+import { Draggable } from "gsap/Draggable";
+import { InertiaPlugin } from "gsap/InertiaPlugin";
+
+gsap.registerPlugin(Draggable, InertiaPlugin);
 
 type DemoCardData = {
   id: number;
@@ -10,9 +14,9 @@ type DemoCardData = {
 };
 
 /**
- * 
+ *
  * TODO: duplication logic to fill the container with cards
- * 
+ *
  **/
 const demoCards: DemoCardData[] = Array.from({ length: 10 }, (_, index) => {
   const id = index + 1;
@@ -29,7 +33,8 @@ export const GsapGallery = () => {
   const cardRefs = useRef<Array<HTMLElement | null>>([]);
 
   useGSAP(
-    () => {
+    (context, contextSafe) => {
+      if (!contextSafe) return;
       const wrapper = document.querySelector(".wrapper");
 
       const boxes = gsap.utils.toArray<HTMLElement>(".box");
@@ -48,11 +53,31 @@ export const GsapGallery = () => {
         },
       });
 
-      boxes.forEach((box, i) =>
-        box.addEventListener("click", () =>
-          loop.toIndex(i, { duration: 0.8, ease: "power1.inOut" })
-        )
-      );
+      let cardClickListeners: (() => void)[] = [];
+      boxes.forEach((box, i) => {
+        const fn = contextSafe(() => {
+          loop.toIndex(i, {
+            duration: 0.8,
+            ease: "power1.inOut",
+            // onComplete: () => {
+            //   !isPaused && loop.play();
+            // },
+          });
+        });
+        box.addEventListener("click", fn);
+        cardClickListeners.push(fn);
+      });
+
+      // replace the two inline adds with named handlers
+      const onEnter = contextSafe(() => {
+        loop.pause();
+      });
+      const onLeave = contextSafe(() => {
+        loop.play();
+      });
+
+      wrapper?.addEventListener("mouseenter", onEnter);
+      wrapper?.addEventListener("mouseleave", onLeave);
 
       // document
       //   .querySelector(".toggle")
@@ -101,6 +126,7 @@ Features:
         let timeline: gsap.core.Timeline;
         items = gsap.utils.toArray(items);
         config = config || {};
+
         gsap.context(() => {
           // use a context so that if this is called from within another context or a gsap.matchMedia(), we can perform proper cleanup like the "resize" event handler on the window
           let onChange = config.onChange;
@@ -111,6 +137,7 @@ Features:
               onChange &&
               function () {
                 let i = tl.closestIndex();
+                // console.log("onUpdate", i);
                 if (lastIndex !== i) {
                   lastIndex = i;
                   onChange(items[i], i);
@@ -408,6 +435,15 @@ Features:
         // @ts-ignore
         return timeline;
       }
+
+      return () => {
+        wrapper?.removeEventListener("mouseenter", onEnter);
+        wrapper?.removeEventListener("mouseleave", onLeave);
+        boxes.forEach((box, i) => {
+          // @ts-ignore
+          box.removeEventListener("click", cardClickListeners[i]);
+        });
+      };
     },
     { scope: wrapperRef }
   );
