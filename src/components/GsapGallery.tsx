@@ -9,6 +9,11 @@ type DemoCardData = {
   description: string;
 };
 
+/**
+ * 
+ * TODO: duplication logic to fill the container with cards
+ * 
+ **/
 const demoCards: DemoCardData[] = Array.from({ length: 10 }, (_, index) => {
   const id = index + 1;
   return {
@@ -158,12 +163,14 @@ Features:
               widths[i] = parseFloat(
                 gsap.getProperty(el, "width", "px").toString()
               );
-              xPercents[i] = Number(snap(
-                (parseFloat(gsap.getProperty(el, "x", "px").toString()) /
-                  widths[i]) *
-                  100 +
-                  Number(gsap.getProperty(el, "xPercent"))
-              ));
+              xPercents[i] = Number(
+                snap(
+                  (parseFloat(gsap.getProperty(el, "x", "px").toString()) /
+                    widths[i]) *
+                    100 +
+                    Number(gsap.getProperty(el, "xPercent"))
+                )
+              );
               b2 = el.getBoundingClientRect();
               spaceBefore[i] = b2.left - (i ? b1.right : b1.left);
               b1 = b2;
@@ -212,14 +219,21 @@ Features:
               item = items[i];
               curX = ((xPercents[i] ?? 0) / 100) * (widths[i] ?? 0);
               distanceToStart =
-                (item?.offsetLeft ?? 0) + curX - (startX ?? 0) + (spaceBefore[0] ?? 0);
+                (item?.offsetLeft ?? 0) +
+                curX -
+                (startX ?? 0) +
+                (spaceBefore[0] ?? 0);
               distanceToLoop =
-                distanceToStart + (widths[i] ?? 0) * Number(gsap.getProperty(item ?? "", "scaleX"));
-                // @ts-ignore
+                distanceToStart +
+                (widths[i] ?? 0) *
+                  Number(gsap.getProperty(item ?? "", "scaleX"));
+              // @ts-ignore
               tl.to(
                 item ?? null,
                 {
-                  xPercent: snap(((curX - distanceToLoop) / (widths[i] ?? 0)) * 100),
+                  xPercent: snap(
+                    ((curX - distanceToLoop) / (widths[i] ?? 0)) * 100
+                  ),
                   duration: distanceToLoop / pixelsPerSecond,
                 },
                 0
@@ -229,7 +243,9 @@ Features:
                   item ?? null,
                   {
                     xPercent: snap(
-                      (((curX - distanceToLoop + totalWidth) / (widths[i] ?? 0)) * 100)
+                      ((curX - distanceToLoop + totalWidth) /
+                        (widths[i] ?? 0)) *
+                        100
                     ),
                   },
                   {
@@ -273,7 +289,10 @@ Features:
               (index += index > curIndex ? -length : length); // always go in the shortest direction
             let newIndex = gsap.utils.wrap(0, length, index);
             let time = times[newIndex] ?? 0;
-            if (time > (tl.time() ?? 0) !== index > curIndex && index !== curIndex) {
+            if (
+              time > (tl.time() ?? 0) !== index > curIndex &&
+              index !== curIndex
+            ) {
               // if we're wrapping the timeline's playhead, make the proper adjustments
               time += (tl.duration() ?? 0) * (index > curIndex ? 1 : -1);
             }
@@ -287,7 +306,8 @@ Features:
               ? tl.time(timeWrap(time))
               : tl.tweenTo(time, vars);
           }
-          tl.toIndex = (index: number, vars: gsap.TweenVars) => toIndex(index, vars);
+          tl.toIndex = (index: number, vars: gsap.TweenVars) =>
+            toIndex(index, vars);
           tl.closestIndex = (setCurrent: boolean) => {
             let index = getClosest(times, tl.time(), tl.duration());
             if (setCurrent) {
@@ -298,7 +318,8 @@ Features:
           };
           tl.current = () => (indexIsDirty ? tl.closestIndex(true) : curIndex);
           tl.next = (vars: gsap.TweenVars) => toIndex(tl.current() + 1, vars);
-          tl.previous = (vars: gsap.TweenVars) => toIndex(tl.current() - 1, vars);
+          tl.previous = (vars: gsap.TweenVars) =>
+            toIndex(tl.current() - 1, vars);
           tl.times = times;
           tl.progress(1, true).progress(0, true); // pre-render for performance
           if (config.reversed) {
@@ -317,7 +338,10 @@ Features:
             let wasPlaying: boolean;
             let align = () =>
               tl.progress(
-                wrap(startProgress + ((draggable?.startX ?? 0) - (draggable?.x ?? 0)) * ratio)
+                wrap(
+                  startProgress +
+                    ((draggable?.startX ?? 0) - (draggable?.x ?? 0)) * ratio
+                )
               );
             let syncIndex = () => tl.closestIndex(true);
 
@@ -340,8 +364,12 @@ Features:
                 initChangeX = startProgress / -ratio - x;
                 gsap.set(proxy, { x: startProgress / -ratio });
               },
-              onDrag: () => {align();},
-              onThrowUpdate: () => {align();},
+              onDrag: () => {
+                align();
+              },
+              onThrowUpdate: () => {
+                align();
+              },
               overshootTolerance: 0,
               inertia: true,
               snap(value) {
