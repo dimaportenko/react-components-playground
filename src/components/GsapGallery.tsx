@@ -20,7 +20,7 @@ const demoCards: DemoCardData[] = Array.from({ length: 10 }, (_, index) => {
 });
 
 export const GsapGallery = () => {
-  const wrapperRef = useRef<HTMLElement | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Array<HTMLElement | null>>([]);
 
   useGSAP(
@@ -31,7 +31,7 @@ export const GsapGallery = () => {
 
       let activeElement: HTMLElement | undefined;
       const loop = horizontalLoop(boxes, {
-        paused: true,
+        paused: false,
         draggable: true, // make it draggable
         center: true, // active element is the one in the center of the container rather than th left edge
         repeat: -1,
@@ -247,7 +247,7 @@ Features:
             timeWrap = gsap.utils.wrap(0, tl.duration());
           };
 
-          let refresh = (deep: boolean) => {
+          let refresh = (deep: boolean = false) => {
             let progress = tl.progress();
             tl.progress(0, true);
             populateWidths();
@@ -267,15 +267,15 @@ Features:
           populateTimeline();
           populateOffsets();
           window.addEventListener("resize", onResize);
-          function toIndex(index, vars) {
+          function toIndex(index: number, vars: gsap.TweenVars) {
             vars = vars || {};
             Math.abs(index - curIndex) > length / 2 &&
               (index += index > curIndex ? -length : length); // always go in the shortest direction
-            let newIndex = gsap.utils.wrap(0, length, index),
-              time = times[newIndex];
-            if (time > tl.time() !== index > curIndex && index !== curIndex) {
+            let newIndex = gsap.utils.wrap(0, length, index);
+            let time = times[newIndex] ?? 0;
+            if (time > (tl.time() ?? 0) !== index > curIndex && index !== curIndex) {
               // if we're wrapping the timeline's playhead, make the proper adjustments
-              time += tl.duration() * (index > curIndex ? 1 : -1);
+              time += (tl.duration() ?? 0) * (index > curIndex ? 1 : -1);
             }
             if (time < 0 || time > tl.duration()) {
               vars.modifiers = { time: timeWrap };
@@ -287,8 +287,8 @@ Features:
               ? tl.time(timeWrap(time))
               : tl.tweenTo(time, vars);
           }
-          tl.toIndex = (index, vars) => toIndex(index, vars);
-          tl.closestIndex = (setCurrent) => {
+          tl.toIndex = (index: number, vars: gsap.TweenVars) => toIndex(index, vars);
+          tl.closestIndex = (setCurrent: boolean) => {
             let index = getClosest(times, tl.time(), tl.duration());
             if (setCurrent) {
               curIndex = index;
@@ -297,35 +297,37 @@ Features:
             return index;
           };
           tl.current = () => (indexIsDirty ? tl.closestIndex(true) : curIndex);
-          tl.next = (vars) => toIndex(tl.current() + 1, vars);
-          tl.previous = (vars) => toIndex(tl.current() - 1, vars);
+          tl.next = (vars: gsap.TweenVars) => toIndex(tl.current() + 1, vars);
+          tl.previous = (vars: gsap.TweenVars) => toIndex(tl.current() - 1, vars);
           tl.times = times;
           tl.progress(1, true).progress(0, true); // pre-render for performance
           if (config.reversed) {
-            tl.vars.onReverseComplete();
+            tl.vars?.onReverseComplete?.();
             tl.reverse();
           }
           if (config.draggable && typeof Draggable === "function") {
             proxy = document.createElement("div");
-            let wrap = gsap.utils.wrap(0, 1),
-              ratio,
-              startProgress,
-              draggable,
-              dragSnap,
-              lastSnap,
-              initChangeX,
-              wasPlaying,
-              align = () =>
-                tl.progress(
-                  wrap(startProgress + (draggable.startX - draggable.x) * ratio)
-                ),
-              syncIndex = () => tl.closestIndex(true);
+            let wrap = gsap.utils.wrap(0, 1);
+            let ratio: number;
+            let startProgress: number;
+            let draggable: Draggable | undefined;
+            let dragSnap: number;
+            let lastSnap: number;
+            let initChangeX: number;
+            let wasPlaying: boolean;
+            let align = () =>
+              tl.progress(
+                wrap(startProgress + ((draggable?.startX ?? 0) - (draggable?.x ?? 0)) * ratio)
+              );
+            let syncIndex = () => tl.closestIndex(true);
+
             typeof InertiaPlugin === "undefined" &&
               console.warn(
                 "InertiaPlugin required for momentum-based scrolling and snapping. https://greensock.com/club"
               );
+
             draggable = Draggable.create(proxy, {
-              trigger: items[0].parentNode,
+              trigger: items?.[0]?.parentNode as HTMLElement,
               type: "x",
               onPressInit() {
                 let x = this.x;
@@ -338,8 +340,8 @@ Features:
                 initChangeX = startProgress / -ratio - x;
                 gsap.set(proxy, { x: startProgress / -ratio });
               },
-              onDrag: align,
-              onThrowUpdate: align,
+              onDrag: () => {align();},
+              onThrowUpdate: () => {align();},
               overshootTolerance: 0,
               inertia: true,
               snap(value) {
@@ -351,7 +353,7 @@ Features:
                   wrappedTime = timeWrap(time),
                   snapTime =
                     times[getClosest(times, wrappedTime, tl.duration())],
-                  dif = snapTime - wrappedTime;
+                  dif = snapTime ?? 0 - wrappedTime;
                 Math.abs(dif) > tl.duration() / 2 &&
                   (dif += dif < 0 ? tl.duration() : -tl.duration());
                 lastSnap = (time + dif) / tl.duration() / -ratio;
@@ -359,7 +361,7 @@ Features:
               },
               onRelease() {
                 syncIndex();
-                draggable.isThrowing && (indexIsDirty = true);
+                draggable?.isThrowing && (indexIsDirty = true);
               },
               onThrowComplete: () => {
                 syncIndex();
@@ -374,6 +376,8 @@ Features:
           timeline = tl;
           return () => window.removeEventListener("resize", onResize); // cleanup
         });
+
+        // @ts-ignore
         return timeline;
       }
     },
