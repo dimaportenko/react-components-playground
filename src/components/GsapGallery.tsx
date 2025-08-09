@@ -4,8 +4,9 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { Draggable } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-gsap.registerPlugin(Draggable, InertiaPlugin);
+gsap.registerPlugin(Draggable, InertiaPlugin, ScrollTrigger);
 
 type DemoCardData = {
   id: number;
@@ -53,20 +54,20 @@ export const GsapGallery = () => {
         },
       });
 
-      let cardClickListeners: (() => void)[] = [];
-      boxes.forEach((box, i) => {
-        const fn = contextSafe(() => {
-          loop.toIndex(i, {
-            duration: 0.8,
-            ease: "power1.inOut",
-            // onComplete: () => {
-            //   !isPaused && loop.play();
-            // },
-          });
-        });
-        box.addEventListener("click", fn);
-        cardClickListeners.push(fn);
-      });
+      // let cardClickListeners: (() => void)[] = [];
+      // boxes.forEach((box, i) => {
+      //   const fn = contextSafe(() => {
+      //     loop.toIndex?.(i, {
+      //       duration: 0.8,
+      //       ease: "power1.inOut",
+      //       // onComplete: () => {
+      //       //   !isPaused && loop.play();
+      //       // },
+      //     });
+      //   });
+      //   box.addEventListener("click", fn);
+      //   cardClickListeners.push(fn);
+      // });
 
       // replace the two inline adds with named handlers
       const onEnter = contextSafe(() => {
@@ -78,6 +79,111 @@ export const GsapGallery = () => {
 
       wrapper?.addEventListener("mouseenter", onEnter);
       wrapper?.addEventListener("mouseleave", onLeave);
+
+      // Add Observer for mouse wheel scrolling with continuous scroll and inertia
+      let scrollVelocity = 0;
+      let momentumTween: gsap.core.Tween | null = null;
+      let lastScrollTime = Date.now();
+      let scrollRatio = 0;
+      let currentScrollProgress = 0;
+      
+      // We need to wait for the loop to be fully initialized to get totalWidth
+      gsap.delayedCall(0.1, () => {
+        // Get the total width from the horizontalLoop for ratio calculation
+        const totalWidth = loop.totalWidth || 
+          ((boxes[boxes.length - 1]?.offsetLeft || 0) + 
+          (boxes[boxes.length - 1]?.offsetWidth || 0) - 
+          (boxes[0]?.offsetLeft || 0)) || 1000; // fallback value
+        
+        scrollRatio = 1 / totalWidth;
+      });
+      
+      const observer = ScrollTrigger.observe({
+        target: wrapper,
+        type: "wheel",
+        preventDefault: true,
+        wheelSpeed: 0.5,
+        onChange: (self) => {
+          // Kill any existing momentum animation when new scroll starts
+          if (momentumTween) {
+            momentumTween.kill();
+            momentumTween = null;
+          }
+          
+          // Calculate time delta for velocity calculation
+          const currentTime = Date.now();
+          const timeDelta = Math.max(16, currentTime - lastScrollTime); // Min 16ms (60fps)
+          lastScrollTime = currentTime;
+          
+          // Combine both X and Y deltas for universal scroll support
+          const deltaX = self.deltaX || 0;
+          const deltaY = self.deltaY || 0;
+          
+          // Use the larger delta (some devices only report one axis)
+          const scrollDelta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY;
+          
+          // Convert scroll delta to progress change
+          // Adjust multiplier (2) to control scroll sensitivity
+          const progressDelta = scrollDelta * scrollRatio * 2;
+          
+          // Update velocity for momentum calculation
+          scrollVelocity = progressDelta / (timeDelta / 1000); // velocity in progress units per second
+          
+          // Get current progress and calculate new progress
+          currentScrollProgress = loop.progress();
+          let newProgress = currentScrollProgress + progressDelta;
+          
+          // Wrap progress between 0 and 1
+          newProgress = gsap.utils.wrap(0, 1, newProgress);
+          
+          // Apply the progress change immediately for responsive feel
+          loop.progress(newProgress);
+          
+          // Clear any existing momentum check
+          gsap.killTweensOf(applyMomentum);
+          
+          // Check for scroll end to apply momentum
+          gsap.delayedCall(0.1, applyMomentum);
+        }
+      });
+      
+      // Function to apply momentum when scrolling stops
+      const applyMomentum = () => {
+        // Only apply momentum if there's significant velocity
+        if (Math.abs(scrollVelocity) > 0.01) {
+          const momentum = scrollVelocity * 0.5; // Momentum factor
+          const duration = Math.min(2, Math.abs(momentum) * 2); // Duration based on momentum
+          
+          // Create momentum tween with easing
+          momentumTween = gsap.to({}, {
+            duration: duration,
+            ease: "power2.out",
+            onUpdate: function() {
+              const progress = this.progress();
+              const remainingMomentum = momentum * (1 - progress);
+              const currentProgress = loop.progress();
+              const newProgress = gsap.utils.wrap(0, 1, currentProgress + remainingMomentum * 0.016); // 60fps frame
+              loop.progress(newProgress);
+            },
+            onComplete: () => {
+              momentumTween = null;
+              scrollVelocity = 0;
+              
+              // Optional: Snap to nearest item when momentum ends
+              // Uncomment the following lines if you want snapping after momentum
+              /*
+              const closestIndex = loop.closestIndex?.(false) || 0;
+              loop.toIndex?.(closestIndex, {
+                duration: 0.3,
+                ease: "power2.inOut"
+              });
+              */
+            }
+          });
+        }
+        
+        scrollVelocity = 0;
+      };
 
       // document
       //   .querySelector(".toggle")
@@ -123,7 +229,16 @@ Features:
           reversed?: boolean;
         }
       ) {
-        let timeline: gsap.core.Timeline;
+        let timeline: gsap.core.Timeline & { 
+          totalWidth?: number;
+          toIndex?: (index: number, vars: gsap.TweenVars) => gsap.core.Tween | void;
+          closestIndex?: (setCurrent: boolean) => number;
+          current?: () => number;
+          next?: (vars: gsap.TweenVars) => gsap.core.Tween | void;
+          previous?: (vars: gsap.TweenVars) => gsap.core.Tween | void;
+          times?: number[];
+          draggable?: Draggable;
+        };
         items = gsap.utils.toArray(items);
         config = config || {};
 
@@ -170,7 +285,7 @@ Features:
           // center === true
           //   ? items[0]?.parentNode
           //   : gsap.utils.toArray(center)[0] || items[0]?.parentNode;
-          let totalWidth: number;
+          let totalWidth: number = 0;
           let getTotalWidth = () => {
             return (
               Number(items?.[length - 1]?.offsetLeft) +
@@ -428,6 +543,10 @@ Features:
           tl.closestIndex(true);
           lastIndex = curIndex;
           onChange && onChange(items[curIndex], curIndex);
+          
+          // Expose totalWidth for wheel scroll calculation
+          tl.totalWidth = totalWidth;
+          
           timeline = tl;
           return () => window.removeEventListener("resize", onResize); // cleanup
         });
@@ -441,8 +560,10 @@ Features:
         wrapper?.removeEventListener("mouseleave", onLeave);
         boxes.forEach((box, i) => {
           // @ts-ignore
-          box.removeEventListener("click", cardClickListeners[i]);
+          // box.removeEventListener("click", cardClickListeners[i]);
         });
+        // Clean up the Observer
+        observer.kill();
       };
     },
     { scope: wrapperRef }
