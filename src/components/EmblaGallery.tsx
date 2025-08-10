@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import type { EmblaOptionsType } from "embla-carousel";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
+import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures'
 import {
   NextButton,
   PrevButton,
@@ -40,15 +41,20 @@ const EmblaGallery: React.FC<PropType> = (props) => {
     {
       loop: true,
       align: "center",
+      skipSnaps: true,
+      dragFree: true,
       ...options,
     },
     [
       AutoScroll({
-        playOnInit: false,
+        playOnInit: true,
         speed: 1,
         stopOnInteraction: true,
         stopOnMouseEnter: true,
         stopOnFocusIn: true,
+      }),
+      WheelGesturesPlugin({
+        forceWheelAxis: 'x',
       }),
     ]
   );
