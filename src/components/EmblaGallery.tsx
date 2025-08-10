@@ -105,8 +105,15 @@ const EmblaGallery: React.FC<PropType> = (props) => {
       .on("reInit", () => setIsPlaying(autoScroll.isPlaying()));
   }, [emblaApi]);
 
+  // Handle mouse leave to start auto-play
+  const handleMouseLeave = useCallback(() => {
+    const autoScroll = emblaApi?.plugins()?.autoScroll;
+    if (!autoScroll) return;
+    autoScroll.play();
+  }, [emblaApi]);
+
   return (
-    <div className="embla">
+    <div className="embla" onMouseLeave={handleMouseLeave}>
       <div className="embla__viewport" ref={emblaRef}>
         <div className="embla__container">
           {slides.map((slide) => (
