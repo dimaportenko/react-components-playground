@@ -25,6 +25,7 @@ This is a React-based GSAP slider gallery application built with Bun as the runt
 ### Tech Stack
 - **Runtime**: Bun (package manager and bundler)
 - **Framework**: React 19 with TypeScript
+- **Routing**: React Router 7.8.2 with declarative routing
 - **Animation**: GSAP 3.13 with @gsap/react hooks
 - **Styling**: Tailwind CSS 4.x with custom dark theme
 - **Build**: Custom Bun build script with plugin system
@@ -49,19 +50,49 @@ Key implementation details:
 #### DemoCard (src/components/DemoCard.tsx)
 Individual slider card component with gradient styling and glass-morphism effects.
 
+### Page Structure
+
+#### Home Page (src/pages/Home.tsx)
+Landing page with navigation cards featuring:
+- Styled navigation links to main application sections
+- Glass-morphism card design with hover effects
+- Responsive grid layout with gradient backgrounds
+
+#### Sliders Page (src/pages/Sliders.tsx)
+Gallery comparison page containing:
+- GSAP Gallery with horizontal infinite scrolling
+- Embla Gallery with carousel navigation
+- Back navigation to home page
+
+#### ScrollAnimation Page (src/pages/ScrollAnimation.tsx)
+Scroll-triggered animation showcase featuring:
+- Fade-in animations on viewport enter
+- Text reveal animations with staggered timing
+- Parallax background effects using ScrollTrigger
+- Reverse animations when leaving viewport
+
 ### Key Patterns
 
 1. **GSAP Integration**: Always use `useGSAP` hook for animations, not direct gsap calls
-2. **TypeScript**: Strict mode enabled - ensure all types are properly defined
-3. **Imports**: Use `@/*` alias for src directory imports
-4. **Styling**: Tailwind utilities preferred, custom colors: `#fbf0df` (light gold), `#f3d5a3` (dark gold)
+2. **React Router**: Use declarative routing with `BrowserRouter`, `Routes`, and `Route` components
+3. **TypeScript**: Strict mode enabled - ensure all types are properly defined
+4. **Imports**: Use `@/*` alias for src directory imports
+5. **Styling**: Tailwind utilities preferred, custom colors: `#fbf0df` (light gold), `#f3d5a3` (dark gold)
 
 ### Server Setup
 
 The application runs as a full-stack Bun app:
 - Entry point: `src/index.tsx` (server)
 - Frontend: `src/frontend.tsx` (React DOM)
+- Router setup: `src/App.tsx` (React Router configuration)
 - API routes available via the server for future expansion
+
+### Routing Structure
+
+The application uses React Router for client-side navigation:
+- `/` - Home page with navigation cards
+- `/sliders` - Gallery comparison page with GSAP and Embla sliders  
+- `/scroll-animation` - Scroll-triggered animation demonstrations
 
 ### Development Notes
 

@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"presentation": {
+		"focus": true,
+	},
+	"problemMatcher": [],
+	"tasks": [
+		{
+			"type": "shell",
+			"command": "bun dev",
+			"label": "bun: dev",
+			"detail": "$ bun dev"
+		}
+	]
+}
