@@ -5,8 +5,9 @@
     @apply text-[rgba(255,255,255,0.87)] bg-[#242424] font-sans;
   }
 
+  /* to center content on the pages use - place-items-center  */
   body {
-    @apply grid place-items-center min-w-[320px] min-h-screen relative m-0;
+    @apply grid min-w-[320px] min-h-screen relative m-0;
   }
 }
 
